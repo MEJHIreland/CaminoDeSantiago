@@ -55,10 +55,11 @@ h1 {
   font-size: 18px;
   font-weight: bold;
   color: #222;
+  cursor: pointer;
   padding: 10px;
   background: #f5f5f5;
   border-radius: 6px;
-  cursor: pointer;
+  margin-bottom: 5px;
 }
 
 .item-header:hover {
@@ -102,9 +103,7 @@ h1 {
 <body>
 
 <h1>Camino Travel Dashboard</h1>
-
 <input type="text" id="search" placeholder="Search for stage, accommodation, dates...">
-
 <div class="list" id="dashboard">Loading...</div>
 
 <script>
@@ -121,15 +120,12 @@ function parseCSV(text) {
 let allItems = [];
 let headers = [];
 
-// Build card
 function buildCard(row) {
   const data = Object.fromEntries(row.map((v,i) => [headers[i], v]));
   const card = document.createElement("div");
   card.className = "item-card";
 
-  const day = data["Day"] || "";
-  const journey = data["Date Journey"] || "";
-
+  // Image
   let imgHTML = "";
   if (data["Image"] && /^https?:\/\//.test(data["Image"])) {
     imgHTML = `<img src="${data["Image"]}" alt="Image">`;
@@ -137,38 +133,34 @@ function buildCard(row) {
     imgHTML = `<div style="width:180px;background:#ddd;"></div>`;
   }
 
-  let content = `
-    <div class="item-content">
-      <div class="item-header toggle">${day} – ${journey}</div>
+  // Always-visible header (journey title)
+  const day = data["Day"] || "";
+  const journey = data["Date Journey"] || "";
+  const headerHTML = `<div class="item-header toggle">${day} – ${journey}</div>`;
 
-      <div class="extra">
-        <div class="item-info"><strong>${data["Accommodation"] || ""}</strong></div>
-  `;
+  // Extra content (hidden by default)
+  let extraHTML = `<div class="extra">`;
+  if (data["Accommodation"]) extraHTML += `<div class="item-info"><strong>Accommodation:</strong> ${data["Accommodation"]}</div>`;
 
   ["Distance To Cover","Notes","Address","Phone Number","Email"].forEach(field => {
-    if (data[field]) {
-      content += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
-    }
+    if (data[field]) extraHTML += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
   });
 
-  content += `<div class="btn-row">`;
-
+  // Buttons
+  extraHTML += `<div class="btn-row">`;
   if (data["Strava Link"] && /^https?:\/\//.test(data["Strava Link"])) {
-    content += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
+    extraHTML += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
   }
-
   if (data["Website"] && /^https?:\/\//.test(data["Website"])) {
-    content += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
+    extraHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
   }
+  extraHTML += `</div></div>`;
 
-  content += `</div></div></div>`;
+  card.innerHTML = imgHTML + '<div class="item-content">' + headerHTML + extraHTML + '</div>';
 
-  card.innerHTML = imgHTML + content;
-
-  // Toggle expand on header click
+  // Toggle only the extra content
   const toggle = card.querySelector(".toggle");
   const extra = card.querySelector(".extra");
-
   toggle.addEventListener("click", () => {
     extra.style.display = extra.style.display === "block" ? "none" : "block";
   });
@@ -176,7 +168,6 @@ function buildCard(row) {
   return card;
 }
 
-// Render
 function render(data) {
   const container = document.getElementById("dashboard");
   container.innerHTML = "";
@@ -196,11 +187,7 @@ fetch(csvUrl)
 // Search
 document.getElementById("search").addEventListener("input", e => {
   const query = e.target.value.toLowerCase();
-
-  const filtered = allItems.filter(row =>
-    row.join(" ").toLowerCase().includes(query)
-  );
-
+  const filtered = allItems.filter(row => row.join(" ").toLowerCase().includes(query));
   render(filtered);
 });
 </script>
