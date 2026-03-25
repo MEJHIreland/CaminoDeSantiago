@@ -1,112 +1,23 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Camino Travel Dashboard</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #fafafa;
-    margin: 0;
-    padding: 20px;
-  }
-  h1 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 20px;
-  }
-  #search {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 16px;
-  }
-  .list {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-  .item-card {
-    display: flex;
-    flex-direction: row;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    overflow: hidden;
-    align-items: stretch;
-  }
-  .item-card img {
-    width: 180px;
-    height: auto;
-    object-fit: cover;
-  }
-  .item-content {
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-  }
-  .item-header {
-    font-size: 18px;
-    font-weight: bold;
-    color: #222;
-    margin-bottom: 8px;
-  }
-  .item-info {
-    font-size: 14px;
-    color: #555;
-    margin-bottom: 6px;
-  }
-  .btn-row {
-    margin-top: auto;
-    display: flex;
-    gap: 10px;
-  }
-  .btn {
-    padding: 10px;
-    flex: 1;
-    text-align: center;
-    background: #1a73e8;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-size: 14px;
-  }
-  .btn:hover {
-    background: #1558c1;
-  }
-</style>
-</head>
-<body>
-
-<h1>Camino Travel Dashboard</h1>
-<input type="text" id="search" placeholder="Search for stage, accommodation, dates...">
-
-<div class="list" id="dashboard"></div>
-
 <script>
-// Your published CSV
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS56dwy6ZBkH0rUmmXURoFouGTAd6vgHt6HlDpag0EYvkEjM5KAc19SskDLIw5ofA2yIEyRzt9owVj1/pub?gid=0&single=true&output=csv";
 
-// Basic CSV parser
+// Better CSV parser
 function parseCSV(text) {
-  const rows = [];
-  const lines = text.split("\n");
-  lines.forEach(line => {
-    const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-    rows.push(values ? values.map(v => v.replace(/^"|"$/g, "")) : []);
+  return text.trim().split("\n").map(row => {
+    return row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+              .map(v => v.replace(/^"|"$/g, "").trim());
   });
-  return rows;
 }
 
-function buildCard(row, headers) {
+let allItems = [];
+let headers = [];
+
+// Build card
+function buildCard(row) {
   const data = Object.fromEntries(row.map((v,i) => [headers[i], v]));
   const card = document.createElement("div");
   card.className = "item-card";
 
-  // Top image (if available)
   let imgHTML = "";
   if (data["Image"] && /^https?:\/\//.test(data["Image"])) {
     imgHTML = `<img src="${data["Image"]}" alt="Image">`;
@@ -114,65 +25,70 @@ function buildCard(row, headers) {
     imgHTML = `<div style="width:180px;background:#ddd;"></div>`;
   }
 
-  // Card content
   let infoHTML = '<div class="item-content">';
 
-  // Show Day and Date Journey at top
-  const day = data["Day"] ? data["Day"] : "";
-  const journey = data["Date Journey"] ? data["Date Journey"] : "";
+  const day = data["Day"] || "";
+  const journey = data["Date Journey"] || "";
   infoHTML += `<div class="item-header">${day} – ${journey}</div>`;
 
-  // Show Accommodation below
   if (data["Accommodation"]) {
     infoHTML += `<div class="item-info"><strong>Accommodation:</strong> ${data["Accommodation"]}</div>`;
   }
 
-  // Buttons for Strava / Website / Booking
   infoHTML += `<div class="btn-row">`;
+
   if (data["Strava Link"] && /^https?:\/\//.test(data["Strava Link"])) {
     infoHTML += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
   }
+
   if (data["Website"] && /^https?:\/\//.test(data["Website"])) {
     infoHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
   }
-  if (data["Booking Number"] && data["Booking Number"].trim() !== "") {
-    infoHTML += `<a class="btn" href="#" target="_blank">Booking</a>`;
+
+  if (data["Booking Number"]) {
+    infoHTML += `<a class="btn" href="#">Booking</a>`;
   }
+
   infoHTML += `</div>`;
 
-  // Additional info fields
   ["Distance To Cover","Notes","Address","Phone Number","Email"].forEach(field => {
     if (data[field]) {
       infoHTML += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
     }
   });
 
-  infoHTML += '</div>'; // close content
+  infoHTML += '</div>';
   card.innerHTML = imgHTML + infoHTML;
+
   return card;
 }
 
-// Render all cards
-let allItems = [];
+// Load data
 fetch(csvUrl)
   .then(r => r.text())
   .then(text => {
     const rows = parseCSV(text);
-    const headers = rows[0];
+    headers = rows[0];
     allItems = rows.slice(1).filter(r => r.length > 1);
-    const container = document.getElementById("dashboard");
-    allItems.forEach(row => container.appendChild(buildCard(row, headers)));
+
+    render(allItems);
   });
 
-// Search filter
+// Render function
+function render(data) {
+  const container = document.getElementById("dashboard");
+  container.innerHTML = "";
+  data.forEach(row => container.appendChild(buildCard(row)));
+}
+
+// Search
 document.getElementById("search").addEventListener("input", e => {
   const query = e.target.value.toLowerCase();
-  const listEl = document.getElementById("dashboard");
-  listEl.innerHTML = "";
-  allItems.filter(row => row.join(" ").toLowerCase().includes(query))
-          .forEach(row => listEl.appendChild(buildCard(row, Object.keys(row))));
+
+  const filtered = allItems.filter(row =>
+    row.join(" ").toLowerCase().includes(query)
+  );
+
+  render(filtered);
 });
 </script>
-
-</body>
-</html>
