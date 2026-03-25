@@ -114,18 +114,20 @@ function buildCard(row, headers) {
     imgHTML = `<div style="width:180px;background:#ddd;"></div>`;
   }
 
-  // Info
-  let infoHTML = `<div class="item-content">`;
-  if (data["Accommodation"]) {
-    infoHTML += `<div class="item-header">${data["Accommodation"]}</div>`;
-  }
-  ["Date Journey","Distance To Cover","Price"].forEach(field => {
-    if (data[field]) {
-      infoHTML += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
-    }
-  });
+  // Card content
+  let infoHTML = '<div class="item-content">';
 
-  // Buttons
+  // Show Day and Date Journey at top
+  const day = data["Day"] ? data["Day"] : "";
+  const journey = data["Date Journey"] ? data["Date Journey"] : "";
+  infoHTML += `<div class="item-header">${day} – ${journey}</div>`;
+
+  // Show Accommodation below
+  if (data["Accommodation"]) {
+    infoHTML += `<div class="item-info"><strong>Accommodation:</strong> ${data["Accommodation"]}</div>`;
+  }
+
+  // Buttons for Strava / Website / Booking
   infoHTML += `<div class="btn-row">`;
   if (data["Strava Link"] && /^https?:\/\//.test(data["Strava Link"])) {
     infoHTML += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
@@ -133,10 +135,19 @@ function buildCard(row, headers) {
   if (data["Website"] && /^https?:\/\//.test(data["Website"])) {
     infoHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
   }
+  if (data["Booking Number"] && data["Booking Number"].trim() !== "") {
+    infoHTML += `<a class="btn" href="#" target="_blank">Booking</a>`;
+  }
   infoHTML += `</div>`;
 
-  infoHTML += `</div>`; // close content
+  // Additional info fields
+  ["Distance To Cover","Notes","Address","Phone Number","Email"].forEach(field => {
+    if (data[field]) {
+      infoHTML += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
+    }
+  });
 
+  infoHTML += '</div>'; // close content
   card.innerHTML = imgHTML + infoHTML;
   return card;
 }
