@@ -10,9 +10,9 @@ h1 { text-align: center; color: #333; margin-bottom: 20px; }
 .list { display:flex; flex-direction:column; gap:18px; }
 .item-card { display:flex; background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); overflow:hidden; }
 .item-card img { 
-  width:180px;          /* fixed width */
-  height:120px;         /* fixed height */
-  object-fit:cover;     /* crop/fit the image to fill the box */
+  width:180px;          
+  height:120px;         
+  object-fit:cover;     
   flex-shrink:0;
   border-radius: 6px 0 0 6px;
 }
@@ -73,11 +73,25 @@ function buildCard(row) {
 
   // Extra details
   let extraHTML = `<div class="extra">`;
-  const fields = ["Accomodation","Distance To Cover","Distance so Far","Notes","Address","Phone Number","Email","Website","Booking Number","Date Booked","Price","People Booked","Opening Hours","Money Out Of Account"];
+  const fields = ["Accomodation","Distance To Cover","Distance So Far","Notes","Address","Phone Number","Email","Website","Booking Number","Date Booked","Price","People Booked","Opening Hours","Money Out Of Account"];
   fields.forEach(f => { if(data[f]) extraHTML += `<div class="item-info"><strong>${f}:</strong> ${data[f]}</div>`; });
 
+  // Buttons row
   extraHTML += `<div class="btn-row">`;
-  if(data["Website"] && /^https?:\/\//.test(data["Website"])) extraHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
+  if(data["Website"] && /^https?:\/\//.test(data["Website"])) {
+    extraHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
+  }
+
+  // Map button from Address column
+  if(data["Address"] && data["Address"].trim() !== "") {
+    // If it's already a URL, use it; otherwise, generate Google Maps link
+    let mapsUrl = data["Address"];
+    if(!/^https?:\/\//.test(mapsUrl)) {
+      mapsUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(mapsUrl);
+    }
+    extraHTML += `<a class="btn" href="${mapsUrl}" target="_blank">Map</a>`;
+  }
+
   extraHTML += `</div></div>`;
 
   card.innerHTML = imgHTML + '<div class="item-content">' + headerHTML + extraHTML + '</div>';
