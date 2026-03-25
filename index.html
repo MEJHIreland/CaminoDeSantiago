@@ -9,7 +9,13 @@ h1 { text-align: center; color: #333; margin-bottom: 20px; }
 #search { width:100%; padding:12px; margin-bottom:20px; border-radius:8px; border:1px solid #ccc; font-size:16px; }
 .list { display:flex; flex-direction:column; gap:18px; }
 .item-card { display:flex; background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); overflow:hidden; }
-.item-card img { width:180px; object-fit:cover; }
+.item-card img { 
+  width:180px;          /* fixed width */
+  height:120px;         /* fixed height */
+  object-fit:cover;     /* crop/fit the image to fill the box */
+  flex-shrink:0;
+  border-radius: 6px 0 0 6px;
+}
 .item-content { padding:15px; flex-grow:1; }
 .item-header { font-size:18px; font-weight:bold; color:#222; cursor:pointer; padding:10px; background:#f5f5f5; border-radius:6px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center; }
 .item-header:hover { background:#eaeaea; }
@@ -59,7 +65,7 @@ function buildCard(row) {
   if (data["Image"] && /^https?:\/\//.test(data["Image"])) {
     imgHTML = `<img src="${data["Image"]}" alt="Image">`;
   } else {
-    imgHTML = `<div style="width:180px;background:#ddd;"></div>`;
+    imgHTML = `<div style="width:180px;height:120px;background:#ddd;"></div>`;
   }
 
   // Header with arrow
