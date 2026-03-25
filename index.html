@@ -1,4 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Camino Travel Dashboard</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #fafafa;
+  margin: 0;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+#search {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.item-card {
+  display: flex;
+  flex-direction: row;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+  align-items: stretch;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.item-card:hover {
+  transform: scale(1.01);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.item-card img {
+  width: 180px;
+  height: auto;
+  object-fit: cover;
+}
+
+.item-content {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.item-header {
+  font-size: 18px;
+  font-weight: bold;
+  color: #222;
+  margin-bottom: 8px;
+}
+
+.item-info {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.extra {
+  display: none;
+  margin-top: 10px;
+}
+
+.btn-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  padding: 10px;
+  flex: 1;
+  text-align: center;
+  background: #1a73e8;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.btn:hover {
+  background: #1558c1;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Camino Travel Dashboard</h1>
+
+<input type="text" id="search" placeholder="Search for stage, accommodation, dates...">
+
+<div class="list" id="dashboard">Loading...</div>
+
 <script>
+const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS56dwy6ZBkH0rUmmXURoFouGTAd6vgHt6HlDpag0EYvkEjM5KAc19SskDLIw5ofA2yIEyRzt9owVj1/pub?gid=0&single=true&output=csv";
+
+// Better CSV parser
+function parseCSV(text) {
+  return text.trim().split("\n").map(row => {
+    return row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+              .map(v => v.replace(/^"|"$/g, "").trim());
+  });
+}
+
+let allItems = [];
+let headers = [];
+
+// Build card
 function buildCard(row) {
   const data = Object.fromEntries(row.map((v,i) => [headers[i], v]));
   const card = document.createElement("div");
@@ -19,22 +147,21 @@ function buildCard(row) {
       <div class="item-header">${day} – ${journey}</div>
       <div class="item-info"><strong>${data["Accommodation"] || ""}</strong></div>
 
-      <div class="extra" style="display:none; margin-top:10px;">
+      <div class="extra">
   `;
 
-  // Extra hidden details
   ["Distance To Cover","Notes","Address","Phone Number","Email"].forEach(field => {
     if (data[field]) {
       content += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
     }
   });
 
-  // Buttons
   content += `<div class="btn-row">`;
 
   if (data["Strava Link"] && /^https?:\/\//.test(data["Strava Link"])) {
     content += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
   }
+
   if (data["Website"] && /^https?:\/\//.test(data["Website"])) {
     content += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
   }
@@ -43,9 +170,8 @@ function buildCard(row) {
 
   card.innerHTML = imgHTML + content;
 
-  // 🔥 Toggle expand on click
+  // Toggle expand
   card.addEventListener("click", (e) => {
-    // prevent button clicks from toggling
     if (e.target.tagName === "A") return;
 
     const extra = card.querySelector(".extra");
@@ -54,4 +180,35 @@ function buildCard(row) {
 
   return card;
 }
+
+// Render function
+function render(data) {
+  const container = document.getElementById("dashboard");
+  container.innerHTML = "";
+  data.forEach(row => container.appendChild(buildCard(row)));
+}
+
+// Load CSV
+fetch(csvUrl)
+  .then(r => r.text())
+  .then(text => {
+    const rows = parseCSV(text);
+    headers = rows[0];
+    allItems = rows.slice(1).filter(r => r.length > 1);
+    render(allItems);
+  });
+
+// Search
+document.getElementById("search").addEventListener("input", e => {
+  const query = e.target.value.toLowerCase();
+
+  const filtered = allItems.filter(row =>
+    row.join(" ").toLowerCase().includes(query)
+  );
+
+  render(filtered);
+});
 </script>
+
+</body>
+</html>
