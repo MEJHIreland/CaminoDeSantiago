@@ -2,32 +2,36 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Camino Journey Overview</title>
+<title>Camino Travel Dashboard</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
-  h1 { text-align: center; margin-bottom: 20px; }
-  input { width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #ccc; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-  .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-  .card h2 { margin-top: 0; font-size: 18px; color: #333; }
-  .card p { margin: 5px 0; font-size: 14px; color: #555; }
-  .card a { color: #1a73e8; text-decoration: none; }
-  .card img { max-width: 100%; border-radius: 5px; margin-top: 10px; }
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+  h1 { text-align: center; margin-bottom: 20px; color: #333; }
+  input { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+  .card { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
+  .card img { width: 100%; height: 180px; object-fit: cover; }
+  .card-content { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+  .card h2 { margin: 0 0 10px; font-size: 18px; color: #222; }
+  .card p { margin: 4px 0; font-size: 14px; color: #555; }
+  .buttons { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .buttons a { flex: 1; text-align: center; padding: 8px; background: #1a73e8; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; }
+  .buttons a:hover { background: #1558b0; }
 </style>
 </head>
 <body>
 
-<h1>Camino De Santiago Overview</h1>
-<input type="text" id="search" placeholder="Search all fields...">
-<div class="cards" id="cardsContainer"></div>
+<h1>Camino De Santiago Travel Dashboard</h1>
+<input type="text" id="search" placeholder="Search accommodations, dates, locations...">
+
+<div class="grid" id="dashboardContainer"></div>
 
 <script>
-// Replace with your published CSV URL
+// Your published CSV URL
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS56dwy6ZBkH0rUmmXURoFouGTAd6vgHt6HlDpag0EYvkEjM5KAc19SskDLIw5ofA2yIEyRzt9owVj1/pub?gid=0&single=true&output=csv";
 
 let allCards = [];
 
-// Simple CSV parser that handles commas inside quotes
+// CSV parser that handles quoted commas
 function parseCSV(text) {
   const rows = [];
   const lines = text.split("\n");
@@ -38,76 +42,82 @@ function parseCSV(text) {
   return rows;
 }
 
-// Check if a string is a URL
 function isURL(str) {
   return str.startsWith("http://") || str.startsWith("https://");
 }
 
-// Render cards dynamically
-function renderCards(rows, headers) {
-  const container = document.getElementById("cardsContainer");
+// Render the dashboard cards
+function renderDashboard(rows, headers) {
+  const container = document.getElementById("dashboardContainer");
   container.innerHTML = "";
-
-  const importantFields = ["Accommodation", "Date Journey", "Price", "Strava Link"];
+  
+  const importantFields = ["Accommodation", "Date Journey", "Price", "Strava Link", "Booking Number"];
 
   rows.forEach(row => {
     if (!row || row.length === 0) return;
     const card = document.createElement("div");
     card.className = "card";
 
-    let html = "";
+    // Optional image at top
+    let imgHTML = "";
+    headers.forEach((header, i) => {
+      const value = row[i]?.trim() || "";
+      if (isURL(value) && header.toLowerCase().includes("image")) {
+        imgHTML = `<img src="${value}" alt="${header}">`;
+      }
+    });
 
-    // Show important fields first
+    // Card content
+    let contentHTML = '<div class="card-content">';
+    
+    // Top important fields
     importantFields.forEach(field => {
       const index = headers.indexOf(field);
-      if (index >= 0 && row[index] && row[index].trim() !== "") {
+      if (index >= 0 && row[index]?.trim()) {
         const value = row[index].trim();
-        if (isURL(value) && field.toLowerCase().includes("image")) {
-          html += `<img src="${value}" alt="${field}">`;
-        } else if (isURL(value)) {
-          html += `<p><strong>${field}:</strong> <a href="${value}" target="_blank">${value}</a></p>`;
+        if (isURL(value)) {
+          contentHTML += `<div class="buttons"><a href="${value}" target="_blank">${field}</a></div>`;
         } else {
-          html += `<p><strong>${field}:</strong> ${value}</p>`;
+          contentHTML += `<h2>${field}: ${value}</h2>`;
         }
       }
     });
 
-    // Show remaining fields
+    // Remaining fields
     headers.forEach((header, i) => {
       if (importantFields.includes(header)) return;
-      const value = row[i] ? row[i].trim() : "";
+      const value = row[i]?.trim();
       if (!value) return;
-
-      if (isURL(value) && header.toLowerCase().includes("image")) {
-        html += `<img src="${value}" alt="${header}">`;
-      } else if (isURL(value)) {
-        html += `<p><strong>${header}:</strong> <a href="${value}" target="_blank">${value}</a></p>`;
+      if (isURL(value)) {
+        contentHTML += `<p><strong>${header}:</strong> <a href="${value}" target="_blank">${value}</a></p>`;
       } else {
-        html += `<p><strong>${header}:</strong> ${value}</p>`;
+        contentHTML += `<p><strong>${header}:</strong> ${value}</p>`;
       }
     });
 
-    card.innerHTML = html;
+    contentHTML += '</div>';
+
+    card.innerHTML = imgHTML + contentHTML;
     container.appendChild(card);
   });
 }
 
-// Fetch CSV and render
+// Fetch CSV and initialize dashboard
 fetch(csvUrl)
   .then(r => r.text())
   .then(text => {
     const rows = parseCSV(text);
     const headers = rows[0];
     allCards = rows.slice(1).filter(r => r.length > 1);
-    renderCards(allCards, headers);
+    renderDashboard(allCards, headers);
   });
 
 // Search functionality
 document.getElementById("search").addEventListener("input", e => {
   const query = e.target.value.toLowerCase();
   const filtered = allCards.filter(row => row.join(" ").toLowerCase().includes(query));
-  const headers = allCards[0] ? allCards[0].map((_,i) => i) : [];
-  renderCards(filtered, filtered.length ? filtered[0].map((_,i)=>`Column${i+1}`) : []);
+  const headers = allCards[0] ? allCards[0].map((_,i)=>i) : [];
+  renderDashboard(filtered, filtered.length ? filtered[0].map((_,i)=>`Column${i+1}`) : []);
 });
 </script>
 
