@@ -1,18 +1,4 @@
 <script>
-const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS56dwy6ZBkH0rUmmXURoFouGTAd6vgHt6HlDpag0EYvkEjM5KAc19SskDLIw5ofA2yIEyRzt9owVj1/pub?gid=0&single=true&output=csv";
-
-// Better CSV parser
-function parseCSV(text) {
-  return text.trim().split("\n").map(row => {
-    return row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-              .map(v => v.replace(/^"|"$/g, "").trim());
-  });
-}
-
-let allItems = [];
-let headers = [];
-
-// Build card
 function buildCard(row) {
   const data = Object.fromEntries(row.map((v,i) => [headers[i], v]));
   const card = document.createElement("div");
@@ -25,70 +11,47 @@ function buildCard(row) {
     imgHTML = `<div style="width:180px;background:#ddd;"></div>`;
   }
 
-  let infoHTML = '<div class="item-content">';
-
   const day = data["Day"] || "";
   const journey = data["Date Journey"] || "";
-  infoHTML += `<div class="item-header">${day} – ${journey}</div>`;
 
-  if (data["Accommodation"]) {
-    infoHTML += `<div class="item-info"><strong>Accommodation:</strong> ${data["Accommodation"]}</div>`;
-  }
+  let content = `
+    <div class="item-content">
+      <div class="item-header">${day} – ${journey}</div>
+      <div class="item-info"><strong>${data["Accommodation"] || ""}</strong></div>
 
-  infoHTML += `<div class="btn-row">`;
+      <div class="extra" style="display:none; margin-top:10px;">
+  `;
 
-  if (data["Strava Link"] && /^https?:\/\//.test(data["Strava Link"])) {
-    infoHTML += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
-  }
-
-  if (data["Website"] && /^https?:\/\//.test(data["Website"])) {
-    infoHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
-  }
-
-  if (data["Booking Number"]) {
-    infoHTML += `<a class="btn" href="#">Booking</a>`;
-  }
-
-  infoHTML += `</div>`;
-
+  // Extra hidden details
   ["Distance To Cover","Notes","Address","Phone Number","Email"].forEach(field => {
     if (data[field]) {
-      infoHTML += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
+      content += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
     }
   });
 
-  infoHTML += '</div>';
-  card.innerHTML = imgHTML + infoHTML;
+  // Buttons
+  content += `<div class="btn-row">`;
+
+  if (data["Strava Link"] && /^https?:\/\//.test(data["Strava Link"])) {
+    content += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
+  }
+  if (data["Website"] && /^https?:\/\//.test(data["Website"])) {
+    content += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
+  }
+
+  content += `</div></div></div>`;
+
+  card.innerHTML = imgHTML + content;
+
+  // 🔥 Toggle expand on click
+  card.addEventListener("click", (e) => {
+    // prevent button clicks from toggling
+    if (e.target.tagName === "A") return;
+
+    const extra = card.querySelector(".extra");
+    extra.style.display = extra.style.display === "none" ? "block" : "none";
+  });
 
   return card;
 }
-
-// Load data
-fetch(csvUrl)
-  .then(r => r.text())
-  .then(text => {
-    const rows = parseCSV(text);
-    headers = rows[0];
-    allItems = rows.slice(1).filter(r => r.length > 1);
-
-    render(allItems);
-  });
-
-// Render function
-function render(data) {
-  const container = document.getElementById("dashboard");
-  container.innerHTML = "";
-  data.forEach(row => container.appendChild(buildCard(row)));
-}
-
-// Search
-document.getElementById("search").addEventListener("input", e => {
-  const query = e.target.value.toLowerCase();
-
-  const filtered = allItems.filter(row =>
-    row.join(" ").toLowerCase().includes(query)
-  );
-
-  render(filtered);
-});
 </script>
