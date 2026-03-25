@@ -3,103 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <title>Camino Travel Dashboard</title>
-
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #fafafa;
-  margin: 0;
-  padding: 20px;
-}
-
-h1 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-#search {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 16px;
-}
-
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.item-card {
-  display: flex;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  overflow: hidden;
-}
-
-.item-card img {
-  width: 180px;
-  object-fit: cover;
-}
-
-.item-content {
-  padding: 15px;
-  flex-grow: 1;
-}
-
-.item-header {
-  font-size: 18px;
-  font-weight: bold;
-  color: #222;
-  cursor: pointer;
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 6px;
-  margin-bottom: 5px;
-}
-
-.item-header:hover {
-  background: #eaeaea;
-}
-
-.item-info {
-  font-size: 14px;
-  color: #555;
-  margin-bottom: 6px;
-}
-
-.extra {
-  display: none;
-  margin-top: 10px;
-}
-
-.btn-row {
-  margin-top: 10px;
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  padding: 10px;
-  flex: 1;
-  text-align: center;
-  background: #1a73e8;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.btn:hover {
-  background: #1558c1;
-}
+body { font-family: Arial, sans-serif; background: #fafafa; margin: 0; padding: 20px; }
+h1 { text-align: center; color: #333; margin-bottom: 20px; }
+#search { width:100%; padding:12px; margin-bottom:20px; border-radius:8px; border:1px solid #ccc; font-size:16px; }
+.list { display:flex; flex-direction:column; gap:18px; }
+.item-card { display:flex; background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); overflow:hidden; }
+.item-card img { width:180px; object-fit:cover; }
+.item-content { padding:15px; flex-grow:1; }
+.item-header { font-size:18px; font-weight:bold; color:#222; cursor:pointer; padding:10px; background:#f5f5f5; border-radius:6px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center; }
+.item-header:hover { background:#eaeaea; }
+.item-info { font-size:14px; color:#555; margin-bottom:6px; }
+.extra { display:none; margin-top:10px; }
+.btn-row { margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
+.btn { padding:10px; flex:1; text-align:center; background:#1a73e8; color:white; text-decoration:none; border-radius:6px; font-size:14px; }
+.btn:hover { background:#1558c1; }
+.arrow { font-size:14px; transition: transform 0.2s; }
+.arrow.open { transform: rotate(90deg); }
 </style>
 </head>
-
 <body>
 
 <h1>Camino Travel Dashboard</h1>
@@ -109,20 +31,26 @@ h1 {
 <script>
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS56dwy6ZBkH0rUmmXURoFouGTAd6vgHt6HlDpag0EYvkEjM5KAc19SskDLIw5ofA2yIEyRzt9owVj1/pub?output=csv";
 
-// Parse CSV
+// Robust CSV parser keeping empty cells
 function parseCSV(text) {
-  return text.trim().split("\n").map(row => {
-    return row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-              .map(v => v.replace(/^"|"$/g, "").trim());
+  const lines = text.trim().split("\n");
+  return lines.map(line => {
+    const row = line.match(/(".*?"|[^",\n]+)(?=\s*,|\s*$)/g) || [];
+    return row.map(cell => cell.replace(/^"|"$/g, "").trim());
   });
 }
 
 let allItems = [];
 let headers = [];
 
-// Build card
 function buildCard(row) {
-  const data = Object.fromEntries(row.map((v,i) => [headers[i], v]));
+  const data = {};
+  headers.forEach((h,i) => { data[h] = row[i] || ""; });
+
+  const date = data["Date"] || "Unknown Date";
+  const journey = data["Journey"] || "Unknown Journey";
+  const title = `${date} – ${journey}`;
+
   const card = document.createElement("div");
   card.className = "item-card";
 
@@ -134,37 +62,16 @@ function buildCard(row) {
     imgHTML = `<div style="width:180px;background:#ddd;"></div>`;
   }
 
-  // Always-visible header (Date – Journey)
-  const date = data["Date"] || "";
-  const journey = data["Journey"] || "";
-  const headerHTML = `<div class="item-header toggle">${date} – ${journey}</div>`;
+  // Header with arrow
+  const headerHTML = `<div class="item-header toggle"><span>${title}</span><span class="arrow">&#9654;</span></div>`;
 
-  // Extra content (hidden by default)
+  // Extra details
   let extraHTML = `<div class="extra">`;
+  const fields = ["Accomodation","Distance To Cover","Distance so Far","Notes","Address","Phone Number","Email","Website","Booking Number","Date Booked","Price","People Booked","Opening Hours","Money Out Of Account"];
+  fields.forEach(f => { if(data[f]) extraHTML += `<div class="item-info"><strong>${f}:</strong> ${data[f]}</div>`; });
 
-  if (data["Accomodation"]) extraHTML += `<div class="item-info"><strong>Accomodation:</strong> ${data["Accomodation"]}</div>`;
-  if (data["Distance To Cover"]) extraHTML += `<div class="item-info"><strong>Distance To Cover:</strong> ${data["Distance To Cover"]}</div>`;
-  if (data["Distance so Far"]) extraHTML += `<div class="item-info"><strong>Distance so Far:</strong> ${data["Distance so Far"]}</div>`;
-  if (data["Notes"]) extraHTML += `<div class="item-info"><strong>Notes:</strong> ${data["Notes"]}</div>`;
-  if (data["Address"]) extraHTML += `<div class="item-info"><strong>Address:</strong> ${data["Address"]}</div>`;
-  if (data["Phone Number"]) extraHTML += `<div class="item-info"><strong>Phone Number:</strong> ${data["Phone Number"]}</div>`;
-  if (data["Email"]) extraHTML += `<div class="item-info"><strong>Email:</strong> ${data["Email"]}</div>`;
-  if (data["Website"]) extraHTML += `<div class="item-info"><strong>Website:</strong> ${data["Website"]}</div>`;
-  if (data["Booking Number"]) extraHTML += `<div class="item-info"><strong>Booking Number:</strong> ${data["Booking Number"]}</div>`;
-  if (data["Date Booked"]) extraHTML += `<div class="item-info"><strong>Date Booked:</strong> ${data["Date Booked"]}</div>`;
-  if (data["Price"]) extraHTML += `<div class="item-info"><strong>Price:</strong> ${data["Price"]}</div>`;
-  if (data["People Booked"]) extraHTML += `<div class="item-info"><strong>People Booked:</strong> ${data["People Booked"]}</div>`;
-  if (data["Opening Hours"]) extraHTML += `<div class="item-info"><strong>Opening Hours:</strong> ${data["Opening Hours"]}</div>`;
-  if (data["Money Out Of Account"]) extraHTML += `<div class="item-info"><strong>Money Out Of Account:</strong> ${data["Money Out Of Account"]}</div>`;
-
-  // Buttons row
   extraHTML += `<div class="btn-row">`;
-  if (data["Strava Link"] && /^https?:\/\//.test(data["Strava Link"])) {
-    extraHTML += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
-  }
-  if (data["Website"] && /^https?:\/\//.test(data["Website"])) {
-    extraHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
-  }
+  if(data["Website"] && /^https?:\/\//.test(data["Website"])) extraHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
   extraHTML += `</div></div>`;
 
   card.innerHTML = imgHTML + '<div class="item-content">' + headerHTML + extraHTML + '</div>';
@@ -172,34 +79,38 @@ function buildCard(row) {
   // Toggle expand/collapse
   const toggle = card.querySelector(".toggle");
   const extra = card.querySelector(".extra");
-  toggle.addEventListener("click", () => {
-    extra.style.display = extra.style.display === "block" ? "none" : "block";
+  const arrow = card.querySelector(".arrow");
+  toggle.addEventListener("click", ()=>{
+    if(extra.style.display === "block") {
+      extra.style.display = "none";
+      arrow.classList.remove("open");
+    } else {
+      extra.style.display = "block";
+      arrow.classList.add("open");
+    }
   });
 
   return card;
 }
 
-// Render list
 function render(data) {
   const container = document.getElementById("dashboard");
   container.innerHTML = "";
   data.forEach(row => container.appendChild(buildCard(row)));
 }
 
-// Load CSV
 fetch(csvUrl)
   .then(r => r.text())
-  .then(text => {
+  .then(text=>{
     const rows = parseCSV(text);
-    headers = rows[0].map(h => h.trim());
-    allItems = rows.slice(1).filter(r => r.length > 1);
+    headers = rows[0].map(h=>h.trim());
+    allItems = rows.slice(1).filter(r=>r.length>0);
     render(allItems);
   });
 
-// Search filter
-document.getElementById("search").addEventListener("input", e => {
+document.getElementById("search").addEventListener("input", e=>{
   const query = e.target.value.toLowerCase();
-  const filtered = allItems.filter(row => row.join(" ").toLowerCase().includes(query));
+  const filtered = allItems.filter(row=>row.join(" ").toLowerCase().includes(query));
   render(filtered);
 });
 </script>
