@@ -71,18 +71,20 @@ function buildCard(row) {
   // Header with arrow
   const headerHTML = `<div class="item-header toggle"><span>${title}</span><span class="arrow">&#9654;</span></div>`;
 
-  // Extra details (skip Address column)
+  // Extra details (skip Address and Website columns)
   let extraHTML = `<div class="extra">`;
-  const fields = ["Accomodation","Distance To Cover","Distance so Far","Notes","Phone Number","Email","Website","Booking Number","Date Booked","Price","People Booked","Opening Hours","Money Out Of Account"];
+  const fields = ["Accomodation","Distance To Cover","Distance so Far","Notes","Phone Number","Email","Booking Number","Date Booked","Price","People Booked","Opening Hours","Money Out Of Account"];
   fields.forEach(f => { if(data[f]) extraHTML += `<div class="item-info"><strong>${f}:</strong> ${data[f]}</div>`; });
 
   // Buttons row
   extraHTML += `<div class="btn-row">`;
+
+  // Website button only
   if(data["Website"] && /^https?:\/\//.test(data["Website"])) {
     extraHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
   }
 
-  // Map button from Address column
+  // Map button only
   if(data["Address"] && data["Address"].trim() !== "") {
     let mapsUrl = data["Address"];
     if(!/^https?:\/\//.test(mapsUrl)) {
