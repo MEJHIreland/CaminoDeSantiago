@@ -4,34 +4,93 @@
 <meta charset="UTF-8">
 <title>Camino Travel Dashboard</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
-  h1 { text-align: center; margin-bottom: 20px; color: #333; }
-  input { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-  .card { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
-  .card img { width: 100%; height: 180px; object-fit: cover; }
-  .card-content { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
-  .card h2 { margin: 0 0 10px; font-size: 18px; color: #222; }
-  .card p { margin: 4px 0; font-size: 14px; color: #555; }
-  .buttons { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
-  .buttons a { flex: 1; text-align: center; padding: 8px; background: #1a73e8; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; }
-  .buttons a:hover { background: #1558b0; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #fafafa;
+    margin: 0;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  #search {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+  }
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .item-card {
+    display: flex;
+    flex-direction: row;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    align-items: stretch;
+  }
+  .item-card img {
+    width: 180px;
+    height: auto;
+    object-fit: cover;
+  }
+  .item-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+  .item-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: #222;
+    margin-bottom: 8px;
+  }
+  .item-info {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 6px;
+  }
+  .btn-row {
+    margin-top: auto;
+    display: flex;
+    gap: 10px;
+  }
+  .btn {
+    padding: 10px;
+    flex: 1;
+    text-align: center;
+    background: #1a73e8;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .btn:hover {
+    background: #1558c1;
+  }
 </style>
 </head>
 <body>
 
-<h1>Camino De Santiago Travel Dashboard</h1>
-<input type="text" id="search" placeholder="Search accommodations, dates, locations...">
+<h1>Camino Travel Dashboard</h1>
+<input type="text" id="search" placeholder="Search for stage, accommodation, dates...">
 
-<div class="grid" id="dashboardContainer"></div>
+<div class="list" id="dashboard"></div>
 
 <script>
-// Your published CSV URL
+// Your published CSV
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS56dwy6ZBkH0rUmmXURoFouGTAd6vgHt6HlDpag0EYvkEjM5KAc19SskDLIw5ofA2yIEyRzt9owVj1/pub?gid=0&single=true&output=csv";
 
-let allCards = [];
-
-// CSV parser that handles quoted commas
+// Basic CSV parser
 function parseCSV(text) {
   const rows = [];
   const lines = text.split("\n");
@@ -42,82 +101,65 @@ function parseCSV(text) {
   return rows;
 }
 
-function isURL(str) {
-  return str.startsWith("http://") || str.startsWith("https://");
-}
+function buildCard(row, headers) {
+  const data = Object.fromEntries(row.map((v,i) => [headers[i], v]));
+  const card = document.createElement("div");
+  card.className = "item-card";
 
-// Render the dashboard cards
-function renderDashboard(rows, headers) {
-  const container = document.getElementById("dashboardContainer");
-  container.innerHTML = "";
-  
-  const importantFields = ["Accommodation", "Date Journey", "Price", "Strava Link", "Booking Number"];
+  // Top image (if available)
+  let imgHTML = "";
+  if (data["Image"] && /^https?:\/\//.test(data["Image"])) {
+    imgHTML = `<img src="${data["Image"]}" alt="Image">`;
+  } else {
+    imgHTML = `<div style="width:180px;background:#ddd;"></div>`;
+  }
 
-  rows.forEach(row => {
-    if (!row || row.length === 0) return;
-    const card = document.createElement("div");
-    card.className = "card";
-
-    // Optional image at top
-    let imgHTML = "";
-    headers.forEach((header, i) => {
-      const value = row[i]?.trim() || "";
-      if (isURL(value) && header.toLowerCase().includes("image")) {
-        imgHTML = `<img src="${value}" alt="${header}">`;
-      }
-    });
-
-    // Card content
-    let contentHTML = '<div class="card-content">';
-    
-    // Top important fields
-    importantFields.forEach(field => {
-      const index = headers.indexOf(field);
-      if (index >= 0 && row[index]?.trim()) {
-        const value = row[index].trim();
-        if (isURL(value)) {
-          contentHTML += `<div class="buttons"><a href="${value}" target="_blank">${field}</a></div>`;
-        } else {
-          contentHTML += `<h2>${field}: ${value}</h2>`;
-        }
-      }
-    });
-
-    // Remaining fields
-    headers.forEach((header, i) => {
-      if (importantFields.includes(header)) return;
-      const value = row[i]?.trim();
-      if (!value) return;
-      if (isURL(value)) {
-        contentHTML += `<p><strong>${header}:</strong> <a href="${value}" target="_blank">${value}</a></p>`;
-      } else {
-        contentHTML += `<p><strong>${header}:</strong> ${value}</p>`;
-      }
-    });
-
-    contentHTML += '</div>';
-
-    card.innerHTML = imgHTML + contentHTML;
-    container.appendChild(card);
+  // Info
+  let infoHTML = `<div class="item-content">`;
+  if (data["Accommodation"]) {
+    infoHTML += `<div class="item-header">${data["Accommodation"]}</div>`;
+  }
+  ["Date Journey","Distance To Cover","Price"].forEach(field => {
+    if (data[field]) {
+      infoHTML += `<div class="item-info"><strong>${field}:</strong> ${data[field]}</div>`;
+    }
   });
+
+  // Buttons
+  infoHTML += `<div class="btn-row">`;
+  if (data["Strava Link"] && /^https?:\/\//.test(data["Strava Link"])) {
+    infoHTML += `<a class="btn" href="${data["Strava Link"]}" target="_blank">Strava</a>`;
+  }
+  if (data["Website"] && /^https?:\/\//.test(data["Website"])) {
+    infoHTML += `<a class="btn" href="${data["Website"]}" target="_blank">Website</a>`;
+  }
+  infoHTML += `</div>`;
+
+  infoHTML += `</div>`; // close content
+
+  card.innerHTML = imgHTML + infoHTML;
+  return card;
 }
 
-// Fetch CSV and initialize dashboard
+// Render all cards
+let allItems = [];
 fetch(csvUrl)
   .then(r => r.text())
   .then(text => {
     const rows = parseCSV(text);
     const headers = rows[0];
-    allCards = rows.slice(1).filter(r => r.length > 1);
-    renderDashboard(allCards, headers);
+    allItems = rows.slice(1).filter(r => r.length > 1);
+    const container = document.getElementById("dashboard");
+    allItems.forEach(row => container.appendChild(buildCard(row, headers)));
   });
 
-// Search functionality
+// Search filter
 document.getElementById("search").addEventListener("input", e => {
   const query = e.target.value.toLowerCase();
-  const filtered = allCards.filter(row => row.join(" ").toLowerCase().includes(query));
-  const headers = allCards[0] ? allCards[0].map((_,i)=>i) : [];
-  renderDashboard(filtered, filtered.length ? filtered[0].map((_,i)=>`Column${i+1}`) : []);
+  const listEl = document.getElementById("dashboard");
+  listEl.innerHTML = "";
+  allItems.filter(row => row.join(" ").toLowerCase().includes(query))
+          .forEach(row => listEl.appendChild(buildCard(row, Object.keys(row))));
 });
 </script>
 
