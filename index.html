@@ -134,8 +134,8 @@ function buildCard(row) {
   }
 
   // Always-visible header (journey title)
-  const day = data["Day"] || "";
-  const journey = data["Date Journey"] || "";
+  const day = data["Date"] || "";
+  const journey = data["Journey"] || "";
   const headerHTML = `<div class="item-header toggle">${day} – ${journey}</div>`;
 
   // Extra content (hidden by default)
